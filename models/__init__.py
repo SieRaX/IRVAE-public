@@ -1,6 +1,7 @@
 import os
 from omegaconf import OmegaConf
 import torch
+from models.modules import PreTrained_Model
 
 from models.ae import (
     VAE,
@@ -14,6 +15,8 @@ from models.modules import (
     ConvNet28,
     DeConvNet28
 )
+
+from torchvision.models import vit_b_16, ViT_B_16_Weights
 
 def get_net(in_dim, out_dim, **kwargs):
     if kwargs["arch"] == "fc_vec":
@@ -68,12 +71,28 @@ def get_ae(**model_cfg):
         encoder = get_net(in_dim=x_dim, out_dim=z_dim * 2, **model_cfg["encoder"])
         decoder = get_net(in_dim=z_dim, out_dim=x_dim, **model_cfg["decoder"])
         model = VAE(encoder, IsotropicGaussian(decoder))
+
     elif arch == "irvae":
         metric = model_cfg.get("metric", "identity")
         iso_reg = model_cfg.get("iso_reg", 1.0)
         encoder = get_net(in_dim=x_dim, out_dim=z_dim * 2, **model_cfg["encoder"])
         decoder = get_net(in_dim=z_dim, out_dim=x_dim, **model_cfg["decoder"])
         model = IRVAE(encoder, IsotropicGaussian(decoder), iso_reg=iso_reg, metric=metric)
+
+    elif arch == "irvae_pretrain":
+        metric = PreTrained_Model(model_cfg.get("pretrain_model_type", "simple_linear"), model_cfg.get("pretrain_model_path", "models/saved_model/simple_linear.pt"))
+        iso_reg = model_cfg.get("iso_reg", 1.0)
+        encoder = get_net(in_dim=x_dim, out_dim=z_dim * 2, **model_cfg["encoder"])
+        decoder = get_net(in_dim=z_dim, out_dim=x_dim, **model_cfg["decoder"])
+        model = IRVAE(encoder, IsotropicGaussian(decoder), iso_reg=iso_reg, metric=metric)
+
+    elif arch == "irvae_VIT_pretrain":
+        metric = PreTrained_Model('VIT')
+        iso_reg = model_cfg.get("iso_reg", 1.0)
+        encoder = get_net(in_dim=x_dim, out_dim=z_dim * 2, **model_cfg["encoder"])
+        decoder = get_net(in_dim=z_dim, out_dim=x_dim, **model_cfg["decoder"])
+        model = IRVAE(encoder, IsotropicGaussian(decoder), iso_reg=iso_reg, metric=metric)
+
     return model
 
 def get_model(cfg, *args, version=None, **kwargs):
@@ -94,6 +113,8 @@ def _get_model_instance(name):
         return {
             "vae": get_ae,
             "irvae": get_ae,
+            "irvae_pretrain": get_ae,
+            "irvae_VIT_pretrain": get_ae
         }[name]
     except:
         raise ("Model {} not available".format(name))

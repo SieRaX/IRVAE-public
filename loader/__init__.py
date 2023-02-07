@@ -1,6 +1,7 @@
 from torch.utils import data
 
-from loader.MNIST_dataset import MNIST
+from loader.MNIST_dataset import MNIST_
+from loader.CIFAR_dataset import CIFAR10_
 
 def get_dataloader(data_dict, **kwargs):
     dataset = get_dataset(data_dict)
@@ -14,5 +15,7 @@ def get_dataloader(data_dict, **kwargs):
 def get_dataset(data_dict):
     name = data_dict["dataset"]
     if name == 'MNIST':
-        dataset = MNIST(**data_dict)
+        dataset = MNIST_(**data_dict)
+    elif name == 'CIFAR10':
+        dataset = CIFAR10_(**data_dict)
     return dataset

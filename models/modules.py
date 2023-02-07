@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torchvision.models import vit_b_16, ViT_B_16_Weights
 import numpy as np
 
 def get_activation(s_act):
@@ -23,6 +25,28 @@ def get_activation(s_act):
         return nn.ELU()
     else:
         raise ValueError(f"Unexpected activation: {s_act}")
+
+class PreTrained_Model():
+    def __init__(self, model_name = 'simple_linear', parameter_path='models/saved_model/simple_linear.pt') -> None:
+        self.model_name = model_name
+        self.parameter_path = parameter_path
+        # if model_name=='simple_linear':
+        #     self.class_name = Net
+        # self.parameter_path = parameter_path
+
+        # if model_name == 'VIT':
+        #     self.class_name = 
+
+    def get_model(self):
+        if self.model_name == 'simple_linear':
+            model = Net()
+            model.load_state_dict(torch.load(self.parameter_path))
+        
+        elif self.model_name == 'VIT':
+            model = enhanced_VIT()
+
+        return model
+
 
 class FC_vec(nn.Module):
     def __init__(
@@ -226,3 +250,46 @@ class DeConvNet28(nn.Module):
         x = self.net(x)
         return x
 
+class Net(torch.nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.fc1 = torch.nn.Linear(784, 256)
+        self.fc2 = torch.nn.Linear(256, 256)
+        self.fc3 = torch.nn.Linear(256, 256)
+        self.fc4 = torch.nn.Linear(256, 128)
+        self.fc5 = torch.nn.Linear(128, 128)
+        self.fc6 = torch.nn.Linear(128, 10)
+    
+    def forward(self, x):
+        x = x.view(-1, 784)
+        x = torch.nn.functional.relu(self.fc1(x))
+        x = torch.nn.functional.relu(self.fc2(x))
+        x = torch.nn.functional.relu(self.fc3(x))
+        x = torch.nn.functional.relu(self.fc4(x))
+        x = torch.nn.functional.relu(self.fc5(x))
+        x = torch.nn.functional.dropout(x, training=self.training)
+        x = self.fc6(x)
+        return x
+
+    def linear_forward(self, x): 
+        x = torch.nn.functional.relu(self.fc1(x))
+        x = torch.nn.functional.relu(self.fc2(x))
+        x = torch.nn.functional.relu(self.fc3(x))
+        x = torch.nn.functional.relu(self.fc4(x))
+        x = torch.nn.functional.relu(self.fc5(x))
+        x = self.fc6(x)
+        return x
+
+class enhanced_VIT(torch.nn.Module):
+    def __init__(self):
+        super(enhanced_VIT, self).__init__()
+        self.vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+
+    def forward(self, x):
+        x = F.interpolate(x, size=(224, 224), mode='bilinear')
+        x = x.repeat(1, 3, 1, 1)
+
+        # print(f"vit input shape: {x.shape}")
+        x = self.vit(x)
+
+        return x

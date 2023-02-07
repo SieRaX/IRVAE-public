@@ -1,19 +1,22 @@
 from pexpect import split_command_line
 import torch
 import os
+from PIL import Image
 from torchvision.datasets.mnist import MNIST
+from torchvision.transforms import ToTensor, ToPILImage
 
-class MNIST(MNIST):
+class MNIST_(MNIST):
     def __init__(self,
         root,
         digits=[0,1],
         download=True,
         split='training',
+        transform=None,
         **kwargs):
 
         super(MNIST, self).__init__(
             root,
-            download=download,
+            transform=transform
         )
 
         if download:
@@ -74,5 +77,7 @@ class MNIST(MNIST):
 
     def __getitem__(self, idx):
         x = self.data[idx]
+        if self.transform is not None:
+            x = self.transform(x)
         y = self.targets[idx]
         return x, y
